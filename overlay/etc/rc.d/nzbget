@@ -1,0 +1,62 @@
+#!/bin/sh
+
+# $FreeBSD$
+#
+# PROVIDE: nzbget
+# REQUIRE: LOGIN
+# KEYWORD: shutdown
+#
+# Add the following lines to /etc/rc.conf.local or /etc/rc.conf
+# to enable this service:
+#
+# nzbget_enable (bool):    Set to NO by default.
+#                Set it to YES to enable it.
+
+. /etc/rc.subr
+name=nzbget
+rcvar=${name}_enable
+load_rc_config $name
+
+: ${nzbget_enable:=NO}
+
+start_cmd="${name}_start"
+stop_cmd="${name}_stop"
+status_cmd="${name}_status"
+extra_commands="status"
+command="/usr/local/nzbget/nzbget"
+config="/usr/local/nzbget/config"
+pidfile="/usr/local/nzbget/downloads/${name}.lock"
+
+nzbget_start() {
+	# artificial sleep because it doesnt want to start after a restart without it
+	sleep .5
+	${command} -D -c ${config}/nzbget.conf
+	echo "${name} started"
+}
+
+nzbget_status() {
+	# ${command} -L S
+	if [ -e ${pidfile} ] && $(pgrep -F ${pidfile} > /dev/null) ; then
+    	mypid=$(cat ${pidfile})
+	fi
+
+	if [ ! ${mypid} = '' ]; then
+		echo "${name} is running with PID ${mypid}.";
+	else
+		echo "${name} not running?";
+	fi
+}
+
+nzbget_stop() {
+	# ${command} -Q
+	# artificial sleep because stop is backgrounded
+	# sleep 3
+	# echo "${name} stopped"
+	if [ -e "${pidfile}" ]; then
+		kill -s TERM `cat ${pidfile}`
+	else
+		echo "${name} is not running"
+	fi
+}
+
+run_rc_command "$1"
